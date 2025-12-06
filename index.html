@@ -2,7 +2,7 @@
 <html lang='utf-8'>
 <head>
 <meta charset='utf-8' />
-<title>Radar</title>
+<title>雷达探点</title>
 <style type="text/css">
 body {background: #000; color: #f0f0f0;}
 div {margin: auto; padding: 0; width: 1200px; position: relative;}
@@ -16,28 +16,28 @@ canvas {background: transparent; cursor: default; position: absolute; top: 0; wi
  
 <body>
 <div>
-    <h1>Radar</h1>
-    points <select id='pointNum'>
+    <h1>雷达探点</h1>
+    点数 <select id='pointNum'>
         <option value='1000'>1000</option>
         <option value='2000'>2000</option>
         <option value='3000'>3000</option>
     </select>
-    angle visual <select id='angle'>
+    扫描角度 <select id='angle'>
         <option value='15'>15</option>
         <option value='25'>25</option>
         <option value='35'>35</option>
     </select>
-    speed <select id='speed'>
-        <option value='1'>slow</option>
-        <option value='2'>moderate</option>
-        <option value='3'>fast</option>
+    速度 <select id='speed'>
+        <option value='1'>慢速</option>
+        <option value='2'>中速</option>
+        <option value='3'>快速</option>
     </select>
-    color points <input type='checkbox' id='colorLength'>
-    radar line <input type='checkbox' id='raidLine'>
+    彩色点阵 <input type='checkbox' id='colorLength'>
+    雷达网络 <input type='checkbox' id='raidLine'>
     <br />
-    <button id='btInit'>generative points</button>
-    <button id='btFind' disabled='disabled'>Begin</button>
-    <button id='btMarker' disabled='disabled'>Ferret out</button>
+    <button id='btInit'>生成点阵</button>
+    <button id='btFind' disabled='disabled'>开始扫描</button>
+    <button id='btMarker' disabled='disabled'>定位目标</button>
     <!-- <p>(x,y)</p> -->
 </div>
 <div>
