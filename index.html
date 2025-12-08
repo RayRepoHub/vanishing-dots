@@ -158,6 +158,9 @@
         var currentScale = 1.0; // 初始缩放比例 100%
         var scaleStep = 5; // 滚轮缩放步长（百分比）
 
+        // 控件元素引用
+        var angleSelect, speedSelect, raidLineCheckbox;
+
         window.onload = function () {
             btInit = document.querySelector('#btInit');
             btFind = document.querySelector('#btFind');
@@ -167,6 +170,11 @@
             ctxL = canvasL.getContext('2d');
             ctxP = canvasP.getContext('2d');
 
+            // 获取控件引用
+            angleSelect = document.querySelector('#angle');
+            speedSelect = document.querySelector('#speed');
+            raidLineCheckbox = document.querySelector('#raidLine');
+
             // 初始化拖动相关元素
             canvasContainer = document.getElementById('canvasContainer');
             dragSwitch = document.getElementById('dragSwitch');
@@ -174,6 +182,9 @@
             // 初始化缩放相关元素
             scaleSlider = document.getElementById('scaleSlider');
             scaleValueDisplay = document.getElementById('scaleValue');
+
+            // 监听参数变化事件
+            initParameterListeners();
 
             btInit.addEventListener('click', function () {
                 btInit.setAttribute('disabled', 'disabled');
@@ -190,8 +201,9 @@
                 btMarker.removeAttribute('disabled');
                 canvasP.style.cursor = 'default';
                 cancelAnimationFrame(raf);
-                angle = document.querySelector('#angle').value * 1;
-                speed = document.querySelector('#speed').value * 1;
+                // 初始化当前参数
+                angle = parseInt(angleSelect.value);
+                speed = parseInt(speedSelect.value);
                 ts = new Date().getTime();
                 find = false;
                 animation();
@@ -226,6 +238,44 @@
 
             // 初始化缩放功能（进度条+滚轮）
             initScaleFunctionality();
+        }
+
+        // 初始化参数监听器
+        function initParameterListeners() {
+            // 监听扫描角度变化
+            angleSelect.addEventListener('change', function () {
+                if (raf) { // 如果正在扫描
+                    angle = parseInt(this.value);
+                }
+            });
+
+            // 监听速度变化
+            speedSelect.addEventListener('change', function () {
+                if (raf) { // 如果正在扫描
+                    speed = parseInt(this.value);
+                }
+            });
+
+            // 监听雷达网络变化
+            raidLineCheckbox.addEventListener('change', function () {
+                // 立即更新雷达网络显示
+                if (this.checked) {
+                    ctxL.clearRect(0, 0, 1200, 600);
+                    ctxL.strokeStyle = '#345';
+                    ctxL.lineWidth = 1;
+                    drawLine(ctxL, 300, 300);
+                    drawLine(ctxL, 900, 300);
+                } else {
+                    ctxL.clearRect(0, 0, 1200, 600);
+                }
+
+                // 如果正在扫描，重新绘制确保雷达网络变更生效
+                if (raf) {
+                    // 临时暂停动画，刷新后继续
+                    cancelAnimationFrame(raf);
+                    animation();
+                }
+            });
         }
 
         // 初始化拖动功能
@@ -346,7 +396,8 @@
         }
 
         function main() {
-            if (document.querySelector('#raidLine').checked) {
+            // 初始化雷达网络
+            if (raidLineCheckbox.checked) {
                 ctxL.strokeStyle = '#345';
                 ctxL.lineWidth = 1;
                 drawLine(ctxL, 300, 300);
@@ -354,7 +405,8 @@
             } else {
                 ctxL.clearRect(0, 0, 1200, 600);
             }
-            pointNum = document.querySelector('#pointNum').value * 1;
+
+            pointNum = parseInt(document.querySelector('#pointNum').value);
             if (document.querySelector('#colorLength').checked) colorLength = color.length;
             else colorLength = 1;
 
@@ -420,6 +472,7 @@
             ctx.fillStyle = '#000';
             ctx.beginPath();
             ctx.moveTo(x, y);
+            // 使用当前最新的angle值
             ctx.arc(x, y, radius + 10, Math.PI * ang / 180, Math.PI * (360 - angle + ang) / 180);
             ctx.fill();
         }
@@ -444,6 +497,7 @@
             ctxP.putImageData(pointData2, 600, 0);
             drawArc(ctxP, 300, 300, ang);
             drawArc(ctxP, 900, 300, ang);
+            // 使用当前最新的speed值
             ang += speed;
             raf = window.requestAnimationFrame(animation);
         }
