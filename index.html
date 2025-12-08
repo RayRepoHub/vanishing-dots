@@ -156,6 +156,7 @@
         // 缩放相关变量
         var scaleSlider, scaleValueDisplay;
         var currentScale = 1.0; // 初始缩放比例 100%
+        var scaleStep = 5; // 滚轮缩放步长（百分比）
 
         window.onload = function () {
             btInit = document.querySelector('#btInit');
@@ -223,7 +224,7 @@
             // 初始化拖动功能
             initDragFunctionality();
 
-            // 初始化缩放功能
+            // 初始化缩放功能（进度条+滚轮）
             initScaleFunctionality();
         }
 
@@ -289,10 +290,12 @@
             });
         }
 
-        // 初始化缩放功能
+        // 初始化缩放功能（进度条+滚轮）
         function initScaleFunctionality() {
             // 更新缩放显示
             function updateScale(scalePercent) {
+                // 限制缩放范围在10%~200%
+                scalePercent = Math.max(10, Math.min(200, scalePercent));
                 currentScale = scalePercent / 100;
                 // 设置缩放变换
                 canvasContainer.style.transform = `scale(${currentScale})`;
@@ -308,10 +311,24 @@
                 updateScale(scalePercent);
             });
 
-            // 初始化缩放值
-            updateScale(parseInt(scaleSlider.value));
+            // 鼠标滚轮缩放事件
+            canvasContainer.addEventListener('wheel', function (e) {
+                e.preventDefault(); // 阻止页面滚动
 
-            // 支持直接输入数值（可选扩展）
+                // 获取当前缩放百分比
+                var currentScalePercent = parseInt(scaleSlider.value);
+
+                // 滚轮向上（放大），向下（缩小）
+                if (e.deltaY < 0) {
+                    // 向上滚动 - 放大
+                    updateScale(currentScalePercent + scaleStep);
+                } else {
+                    // 向下滚动 - 缩小
+                    updateScale(currentScalePercent - scaleStep);
+                }
+            }, { passive: false });
+
+            // 支持直接输入数值
             scaleValueDisplay.addEventListener('click', function () {
                 var newScale = prompt('请输入缩放比例 (10-200):', currentScale * 100);
                 if (newScale !== null) {
@@ -323,6 +340,9 @@
                     }
                 }
             });
+
+            // 初始化缩放值
+            updateScale(parseInt(scaleSlider.value));
         }
 
         function main() {
