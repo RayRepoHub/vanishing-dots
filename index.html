@@ -42,6 +42,16 @@
             transition: all 0.2s ease;
         }
 
+        /* 快捷键提示样式 - 核心修改：颜色和按钮文本一致 */
+        .shortcut-hint {
+            font-size: 12px;
+            color: inherit;
+            /* 继承按钮文本颜色 */
+            opacity: 0.8;
+            /* 略降低透明度区分，但保持同色 */
+            margin-left: 5px;
+        }
+
         button[disabled=disabled] {
             color: #999;
             cursor: default;
@@ -60,6 +70,12 @@
         button#btInit.initial-state:hover {
             background-color: #45a049;
             box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
+        }
+
+        /* 禁用状态下的提示文字颜色适配 */
+        button[disabled=disabled] .shortcut-hint {
+            color: #999;
+            opacity: 0.7;
         }
 
         .canvas-container {
@@ -133,9 +149,9 @@
         雷达网络 <input type='checkbox' id='raidLine'>
         允许拖动 <input type='checkbox' id='dragSwitch'>
         <br />
-        <button id='btInit' class="initial-state">生成点阵</button>
-        <button id='btFind' disabled='disabled'>开始扫描</button>
-        <button id='btMarker' disabled='disabled'>定位目标</button>
+        <button id='btInit' class="initial-state">生成点阵 <span class="shortcut-hint">(1)</span></button>
+        <button id='btFind' disabled='disabled'>开始扫描 <span class="shortcut-hint">(2)</span></button>
+        <button id='btMarker' disabled='disabled'>定位目标 <span class="shortcut-hint">(3/空格)</span></button>
 
         <div class="scale-control">
             缩放比例:
@@ -267,15 +283,33 @@
             // 初始化缩放功能
             initScaleFunctionality();
 
-            // ===================== 核心新增：空格键快捷键监听 =====================
+            // ===================== 核心：纯单键快捷键监听 =====================
             document.addEventListener('keydown', function (e) {
-                // 只在扫描状态且定位目标按钮可用时触发
-                if (e.code === 'Space' && isScanning && !btMarker.disabled) {
-                    e.preventDefault(); // 阻止页面滚动
-                    btMarker.click(); // 模拟点击定位目标按钮
+                // 过滤输入框/文本域的按键（避免干扰）
+                const activeElement = document.activeElement;
+                if (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable) {
+                    return;
+                }
+
+                // 1. 生成点阵 (数字键1) - 仅按钮可用且非生成中时触发
+                if (e.key === '1' && !btInit.disabled && !isGenerating) {
+                    e.preventDefault(); // 阻止默认行为（如输入法切换）
+                    btInit.click();
+                }
+
+                // 2. 开始扫描 (数字键2) - 仅按钮可用且非扫描中时触发
+                else if (e.key === '2' && !btFind.disabled && !isScanning) {
+                    e.preventDefault();
+                    btFind.click();
+                }
+
+                // 3. 定位目标 (数字键3 / 空格) - 仅扫描状态且按钮可用时触发
+                else if ((e.key === '3' || e.code === 'Space') && isScanning && !btMarker.disabled) {
+                    e.preventDefault(); // 阻止空格滚动页面
+                    btMarker.click();
                 }
             });
-            // =====================================================================
+            // ================================================================
         }
 
         // 初始化参数监听器
