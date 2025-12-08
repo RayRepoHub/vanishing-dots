@@ -595,9 +595,9 @@
             ctxP.strokeRect(point[hide][0] - 10 + 300, point[hide][1] - 10 + 300, 20, 20);
             ctxP.strokeRect(point[hide][0] - 10 + 600 + 300, point[hide][1] - 10 + 300, 20, 20);
             if (Math.abs(point[hide][0] - point[pointNum][0]) < 10 && Math.abs(point[hide][1] - point[pointNum][1]) < 10) {
-                alert('success \n' + 'time ' + (te - ts) + ' ms');
+                alert('恭喜你找到了 \n' + '用时 ' + (te - ts) + ' 毫秒');
             } else {
-                alert('error \n' + 'time ' + (te - ts) + ' ms');
+                alert('噢，找错了 \n' + '用时 ' + (te - ts) + ' 毫秒');
             }
         }
 
