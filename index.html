@@ -33,24 +33,41 @@
 
         button {
             margin: 10px 10px 10px 0;
-            padding: 3px 5px;
+            padding: 6px 12px;
             color: #000;
             cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #ccc;
+            transition: all 0.2s ease;
         }
 
         button[disabled=disabled] {
             color: #999;
             cursor: default;
+            background-color: #666;
+            opacity: 0.7;
+        }
+
+        /* 初始状态的绿色按钮样式 */
+        button#btInit.initial-state {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        button#btInit.initial-state:hover {
+            background-color: #45a049;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
         }
 
         .canvas-container {
             position: relative;
             cursor: default;
-            /* 初始位置 */
             left: 0;
             top: 0;
             transition: none;
-            /* 初始缩放比例 */
             transform-origin: 0 0;
             transform: scale(1);
         }
@@ -114,21 +131,18 @@
         </select>
         彩色点阵 <input type='checkbox' id='colorLength'>
         雷达网络 <input type='checkbox' id='raidLine'>
-        <!-- 新增拖动开关 -->
         允许拖动 <input type='checkbox' id='dragSwitch'>
         <br />
-        <button id='btInit'>生成点阵</button>
+        <button id='btInit' class="initial-state">生成点阵</button>
         <button id='btFind' disabled='disabled'>开始扫描</button>
         <button id='btMarker' disabled='disabled'>定位目标</button>
 
-        <!-- 新增缩放进度条 -->
         <div class="scale-control">
             缩放比例:
             <input type="range" id="scaleSlider" min="10" max="200" value="100">
             <span id="scaleValue">100%</span>
         </div>
     </div>
-    <!-- 修改canvas容器结构，便于拖动 -->
     <div class="canvas-container" id="canvasContainer">
         <canvas id='canvasL' width='1200' height='600'></canvas>
         <canvas id='canvasP' width='1200' height='600'></canvas>
@@ -155,15 +169,18 @@
 
         // 缩放相关变量
         var scaleSlider, scaleValueDisplay;
-        var currentScale = 1.0; // 初始缩放比例 100%
-        var scaleStep = 5; // 滚轮缩放步长（百分比）
+        var currentScale = 1.0;
+        var scaleStep = 5;
 
         // 控件元素引用
         var angleSelect, speedSelect, raidLineCheckbox, pointNumSelect, colorLengthCheckbox;
 
         // 扫描状态标记
         var isScanning = false;
-        var isGenerating = false; // 标记是否正在生成点阵
+        var isGenerating = false;
+
+        // 跟踪生成点阵按钮是否被点击过
+        var isInitClicked = false;
 
         window.onload = function () {
             btInit = document.querySelector('#btInit');
@@ -193,6 +210,11 @@
             initParameterListeners();
 
             btInit.addEventListener('click', function () {
+                if (!isInitClicked) {
+                    this.classList.remove('initial-state');
+                    isInitClicked = true;
+                }
+
                 btInit.setAttribute('disabled', 'disabled');
                 btFind.setAttribute('disabled', 'disabled');
                 btMarker.setAttribute('disabled', 'disabled');
@@ -207,12 +229,11 @@
                 btMarker.removeAttribute('disabled');
                 canvasP.style.cursor = 'default';
                 cancelAnimationFrame(raf);
-                // 初始化当前参数
                 angle = parseInt(angleSelect.value);
                 speed = parseInt(speedSelect.value);
                 ts = new Date().getTime();
                 find = false;
-                isScanning = true; // 标记为扫描状态
+                isScanning = true;
                 animation();
             });
 
@@ -221,7 +242,7 @@
                 btFind.removeAttribute('disabled');
                 canvasP.style.cursor = 'crosshair';
                 cancelAnimationFrame(raf);
-                isScanning = false; // 取消扫描状态
+                isScanning = false;
                 te = new Date().getTime();
                 marker();
             });
@@ -231,7 +252,6 @@
                 btFind.setAttribute('disabled', 'disabled');
                 btMarker.setAttribute('disabled', 'disabled');
                 var rect = this.getBoundingClientRect();
-                // 修正点击坐标，适配缩放比例
                 var scale = currentScale;
                 var x = Math.floor((event.clientX - rect.left) / scale) - 300;
                 var y = Math.floor((event.clientY - rect.top) / scale) - 300;
@@ -244,29 +264,35 @@
             // 初始化拖动功能
             initDragFunctionality();
 
-            // 初始化缩放功能（进度条+滚轮）
+            // 初始化缩放功能
             initScaleFunctionality();
+
+            // ===================== 核心新增：空格键快捷键监听 =====================
+            document.addEventListener('keydown', function (e) {
+                // 只在扫描状态且定位目标按钮可用时触发
+                if (e.code === 'Space' && isScanning && !btMarker.disabled) {
+                    e.preventDefault(); // 阻止页面滚动
+                    btMarker.click(); // 模拟点击定位目标按钮
+                }
+            });
+            // =====================================================================
         }
 
         // 初始化参数监听器
         function initParameterListeners() {
-            // 监听扫描角度变化
             angleSelect.addEventListener('change', function () {
-                if (isScanning) { // 如果正在扫描
+                if (isScanning) {
                     angle = parseInt(this.value);
                 }
             });
 
-            // 监听速度变化
             speedSelect.addEventListener('change', function () {
-                if (isScanning) { // 如果正在扫描
+                if (isScanning) {
                     speed = parseInt(this.value);
                 }
             });
 
-            // 监听雷达网络变化
             raidLineCheckbox.addEventListener('change', function () {
-                // 立即更新雷达网络显示
                 if (this.checked) {
                     ctxL.clearRect(0, 0, 1200, 600);
                     ctxL.strokeStyle = '#345';
@@ -277,171 +303,128 @@
                     ctxL.clearRect(0, 0, 1200, 600);
                 }
 
-                // 如果正在扫描，重新绘制确保雷达网络变更生效
                 if (isScanning) {
-                    // 临时暂停动画，刷新后继续
                     cancelAnimationFrame(raf);
                     animation();
                 }
             });
 
-            // 监听点数变化
             pointNumSelect.addEventListener('change', function () {
-                // 只有扫描状态下才提示
                 if (isScanning) {
                     handleConfigChange('点数', this);
                 }
             });
 
-            // 监听彩色点阵变化
             colorLengthCheckbox.addEventListener('change', function (e) {
-                // 只有扫描状态下才提示
                 if (isScanning) {
-                    // 先阻止默认勾选状态变更
                     e.preventDefault();
                     handleConfigChange('彩色点阵', this);
                 }
             });
         }
 
-        // 处理配置变更的确认逻辑（仅扫描状态下）
         function handleConfigChange(changedItem, element) {
-            // 如果正在生成点阵，不处理
             if (isGenerating) return;
 
-            // 弹出确认对话框
             var confirmResult = confirm(`当前正在扫描，您修改了${changedItem}设置，是否重新生成点阵图？`);
 
             if (confirmResult) {
-                // 用户确认，重新生成点阵
                 btInit.setAttribute('disabled', 'disabled');
                 btFind.setAttribute('disabled', 'disabled');
                 btMarker.setAttribute('disabled', 'disabled');
                 canvasP.style.cursor = 'default';
                 find = false;
-                isScanning = false; // 取消扫描状态
+                isScanning = false;
 
-                // 取消当前的动画
                 if (raf) {
                     cancelAnimationFrame(raf);
                     raf = null;
                 }
-
-                // 重新生成点阵
                 main();
             } else {
-                // 用户取消，恢复原值（针对下拉框/复选框）
                 if (element.tagName === 'SELECT') {
-                    // 下拉框恢复到变更前的值
                     element.selectedIndex = element.dataset.lastIndex || 0;
                 } else if (element.type === 'checkbox') {
-                    // 复选框恢复到变更前的状态
                     element.checked = !element.checked;
                 }
             }
         }
 
-        // 初始化拖动功能
         function initDragFunctionality() {
-            // 拖动开关事件
             dragSwitch.addEventListener('change', function () {
                 if (this.checked) {
                     canvasContainer.classList.add('drag-enabled');
                 } else {
                     canvasContainer.classList.remove('drag-enabled');
-                    isDragging = false; // 取消拖动状态
+                    isDragging = false;
                 }
             });
 
-            // 鼠标按下事件
             canvasContainer.addEventListener('mousedown', function (e) {
-                // 只有开启拖动开关且不是右键点击才允许拖动
                 if (!dragSwitch.checked || e.button === 2) return;
 
                 isDragging = true;
-                // 获取初始位置
                 dragStartX = e.clientX;
                 dragStartY = e.clientY;
 
-                // 获取容器当前位置
                 containerLeft = parseInt(window.getComputedStyle(canvasContainer).left) || 0;
                 containerTop = parseInt(window.getComputedStyle(canvasContainer).top) || 0;
 
-                // 阻止默认行为和冒泡
                 e.preventDefault();
                 e.stopPropagation();
             });
 
-            // 鼠标移动事件
             document.addEventListener('mousemove', function (e) {
                 if (!isDragging || !dragSwitch.checked) return;
 
-                // 计算偏移量
                 var deltaX = e.clientX - dragStartX;
                 var deltaY = e.clientY - dragStartY;
 
-                // 更新容器位置
                 canvasContainer.style.left = (containerLeft + deltaX) + 'px';
                 canvasContainer.style.top = (containerTop + deltaY) + 'px';
 
                 e.preventDefault();
             });
 
-            // 鼠标释放事件
             document.addEventListener('mouseup', function () {
                 isDragging = false;
             });
 
-            // 鼠标离开窗口事件
             document.addEventListener('mouseleave', function () {
                 isDragging = false;
             });
 
-            // 禁用右键菜单
             canvasContainer.addEventListener('contextmenu', function (e) {
                 e.preventDefault();
             });
         }
 
-        // 初始化缩放功能（进度条+滚轮）
         function initScaleFunctionality() {
-            // 更新缩放显示
             function updateScale(scalePercent) {
-                // 限制缩放范围在10%~200%
                 scalePercent = Math.max(10, Math.min(200, scalePercent));
                 currentScale = scalePercent / 100;
-                // 设置缩放变换
                 canvasContainer.style.transform = `scale(${currentScale})`;
-                // 更新显示值
                 scaleValueDisplay.textContent = `${scalePercent}%`;
-                // 更新滑块值
                 scaleSlider.value = scalePercent;
             }
 
-            // 滑块拖动事件
             scaleSlider.addEventListener('input', function () {
                 var scalePercent = parseInt(this.value);
                 updateScale(scalePercent);
             });
 
-            // 鼠标滚轮缩放事件
             canvasContainer.addEventListener('wheel', function (e) {
-                e.preventDefault(); // 阻止页面滚动
+                e.preventDefault();
 
-                // 获取当前缩放百分比
                 var currentScalePercent = parseInt(scaleSlider.value);
 
-                // 滚轮向上（放大），向下（缩小）
                 if (e.deltaY < 0) {
-                    // 向上滚动 - 放大
                     updateScale(currentScalePercent + scaleStep);
                 } else {
-                    // 向下滚动 - 缩小
                     updateScale(currentScalePercent - scaleStep);
                 }
             }, { passive: false });
 
-            // 支持直接输入数值
             scaleValueDisplay.addEventListener('click', function () {
                 var newScale = prompt('请输入缩放比例 (10-200):', currentScale * 100);
                 if (newScale !== null) {
@@ -454,15 +437,12 @@
                 }
             });
 
-            // 初始化缩放值
             updateScale(parseInt(scaleSlider.value));
         }
 
         function main() {
-            // 设置生成状态
             isGenerating = true;
 
-            // 初始化雷达网络
             if (raidLineCheckbox.checked) {
                 ctxL.strokeStyle = '#345';
                 ctxL.lineWidth = 1;
@@ -504,8 +484,6 @@
                         pointData2 = ctxP.getImageData(600, 0, 600, 600);
                         btInit.removeAttribute('disabled');
                         btFind.removeAttribute('disabled');
-
-                        // 重置生成状态
                         isGenerating = false;
                         break;
                     }
@@ -541,14 +519,11 @@
             ctx.fillStyle = '#000';
             ctx.beginPath();
             ctx.moveTo(x, y);
-            // 使用当前最新的angle值
             ctx.arc(x, y, radius + 10, Math.PI * ang / 180, Math.PI * (360 - angle + ang) / 180);
             ctx.fill();
         }
 
-        // 修复checkPoint函数参数错误
         function checkPoint(x, y, c) {
-            // 检查坐标边界
             if (x < -radius || x > radius || y < -radius || y > radius) return false;
 
             var p = ctxP.getImageData(300 + x, 300 + y, pointSize, pointSize);
@@ -566,7 +541,6 @@
             ctxP.putImageData(pointData2, 600, 0);
             drawArc(ctxP, 300, 300, ang);
             drawArc(ctxP, 900, 300, ang);
-            // 使用当前最新的speed值
             ang += speed;
             raf = window.requestAnimationFrame(animation);
         }
@@ -593,11 +567,8 @@
             }
         }
 
-        // 初始化保存下拉框初始索引（用于取消时恢复）
         document.addEventListener('DOMContentLoaded', function () {
-            // 保存点数下拉框初始索引
             pointNumSelect.dataset.lastIndex = pointNumSelect.selectedIndex;
-            // 监听点数下拉框索引变化，更新lastIndex
             pointNumSelect.addEventListener('change', function () {
                 if (!isScanning) {
                     this.dataset.lastIndex = this.selectedIndex;
