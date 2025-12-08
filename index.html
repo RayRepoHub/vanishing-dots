@@ -50,6 +50,9 @@
             left: 0;
             top: 0;
             transition: none;
+            /* 初始缩放比例 */
+            transform-origin: 0 0;
+            transform: scale(1);
         }
 
         canvas {
@@ -69,6 +72,24 @@
 
         .drag-enabled {
             cursor: move !important;
+        }
+
+        /* 缩放进度条样式 */
+        .scale-control {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #scaleSlider {
+            width: 200px;
+        }
+
+        #scaleValue {
+            color: #4CAF50;
+            font-weight: bold;
+            min-width: 60px;
         }
     </style>
 </head>
@@ -99,6 +120,13 @@
         <button id='btInit'>生成点阵</button>
         <button id='btFind' disabled='disabled'>开始扫描</button>
         <button id='btMarker' disabled='disabled'>定位目标</button>
+
+        <!-- 新增缩放进度条 -->
+        <div class="scale-control">
+            缩放比例:
+            <input type="range" id="scaleSlider" min="10" max="200" value="100">
+            <span id="scaleValue">100%</span>
+        </div>
     </div>
     <!-- 修改canvas容器结构，便于拖动 -->
     <div class="canvas-container" id="canvasContainer">
@@ -125,6 +153,10 @@
         var dragStartX, dragStartY;
         var containerLeft, containerTop;
 
+        // 缩放相关变量
+        var scaleSlider, scaleValueDisplay;
+        var currentScale = 1.0; // 初始缩放比例 100%
+
         window.onload = function () {
             btInit = document.querySelector('#btInit');
             btFind = document.querySelector('#btFind');
@@ -137,6 +169,10 @@
             // 初始化拖动相关元素
             canvasContainer = document.getElementById('canvasContainer');
             dragSwitch = document.getElementById('dragSwitch');
+
+            // 初始化缩放相关元素
+            scaleSlider = document.getElementById('scaleSlider');
+            scaleValueDisplay = document.getElementById('scaleValue');
 
             btInit.addEventListener('click', function () {
                 btInit.setAttribute('disabled', 'disabled');
@@ -174,16 +210,21 @@
                 btFind.setAttribute('disabled', 'disabled');
                 btMarker.setAttribute('disabled', 'disabled');
                 var rect = this.getBoundingClientRect();
-                var x = Math.floor(event.clientX - rect.left) - 300;
-                var y = Math.floor(event.clientY - rect.top) - 300;
+                // 修正点击坐标，适配缩放比例
+                var scale = currentScale;
+                var x = Math.floor((event.clientX - rect.left) / scale) - 300;
+                var y = Math.floor((event.clientY - rect.top) / scale) - 300;
                 if (x > 300) x -= 300;
                 point.push([x, y, 0]);
                 find = false;
                 result();
             });
 
-            // 拖动功能实现
+            // 初始化拖动功能
             initDragFunctionality();
+
+            // 初始化缩放功能
+            initScaleFunctionality();
         }
 
         // 初始化拖动功能
@@ -245,6 +286,42 @@
             // 禁用右键菜单
             canvasContainer.addEventListener('contextmenu', function (e) {
                 e.preventDefault();
+            });
+        }
+
+        // 初始化缩放功能
+        function initScaleFunctionality() {
+            // 更新缩放显示
+            function updateScale(scalePercent) {
+                currentScale = scalePercent / 100;
+                // 设置缩放变换
+                canvasContainer.style.transform = `scale(${currentScale})`;
+                // 更新显示值
+                scaleValueDisplay.textContent = `${scalePercent}%`;
+                // 更新滑块值
+                scaleSlider.value = scalePercent;
+            }
+
+            // 滑块拖动事件
+            scaleSlider.addEventListener('input', function () {
+                var scalePercent = parseInt(this.value);
+                updateScale(scalePercent);
+            });
+
+            // 初始化缩放值
+            updateScale(parseInt(scaleSlider.value));
+
+            // 支持直接输入数值（可选扩展）
+            scaleValueDisplay.addEventListener('click', function () {
+                var newScale = prompt('请输入缩放比例 (10-200):', currentScale * 100);
+                if (newScale !== null) {
+                    newScale = parseInt(newScale);
+                    if (!isNaN(newScale) && newScale >= 10 && newScale <= 200) {
+                        updateScale(newScale);
+                    } else {
+                        alert('请输入10到200之间的有效数字');
+                    }
+                }
             });
         }
 
